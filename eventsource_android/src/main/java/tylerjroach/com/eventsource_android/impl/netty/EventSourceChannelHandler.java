@@ -112,7 +112,9 @@ public class EventSourceChannelHandler extends SimpleChannelUpstreamHandler impl
                 status = Integer.parseInt(statusMatcher.group(1));
                 if (status != 200) {
                     eventSourceHandler.onError(new EventSourceException("Bad status from " + uri + ": " + status));
-                    reconnect();
+                    if (status != 503) {
+                        reconnect();
+                    }
                 }
                 return;
             } else {
