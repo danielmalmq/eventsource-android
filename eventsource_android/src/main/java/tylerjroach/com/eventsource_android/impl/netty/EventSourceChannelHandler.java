@@ -51,6 +51,7 @@ public class EventSourceChannelHandler extends SimpleChannelUpstreamHandler impl
     private boolean headerDone;
     private Integer status;
     private AtomicBoolean reconnecting = new AtomicBoolean(false);
+    private int mConnectionAttempts = 0;
 
     public EventSourceChannelHandler(EventSourceHandler eventSourceHandler, long reconnectionTimeMillis, ClientBootstrap bootstrap, URI uri, Map<String, String> headers) {
         this.eventSourceHandler = eventSourceHandler;
@@ -85,6 +86,8 @@ public class EventSourceChannelHandler extends SimpleChannelUpstreamHandler impl
         }
         e.getChannel().write(request);
         channel = e.getChannel();
+
+        mConnectionAttempts = 0;
     }
 
     @Override
@@ -172,6 +175,10 @@ public class EventSourceChannelHandler extends SimpleChannelUpstreamHandler impl
     private void reconnect() {
         if(!reconnecting.get()) {
             reconnecting.set(true);
+
+            long timeToWait = mConnectionAttempts > 0 ? reconnectionTimeMillis : 0;
+            mConnectionAttempts++;
+
             timer.newTimeout(new TimerTask() {
                 @Override
                 public void run(Timeout timeout) throws Exception {
@@ -183,7 +190,7 @@ public class EventSourceChannelHandler extends SimpleChannelUpstreamHandler impl
                     bootstrap.setOption("remoteAddress", new InetSocketAddress(uri.getHost(), port));
                     bootstrap.connect().await();
                 }
-            }, reconnectionTimeMillis, TimeUnit.MILLISECONDS);
+            }, timeToWait, TimeUnit.MILLISECONDS);
         }
     }
 }
